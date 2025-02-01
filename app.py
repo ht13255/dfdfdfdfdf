@@ -11,33 +11,29 @@ from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 
-# **Chrome 드라이버 설정 (Streamlit Cloud 호환)**
-def init_driver():
-    chrome_options = Options()
-    chrome_options.add_argument("--headless=new")
-    chrome_options.add_argument("--disable-blink-features=AutomationControlled")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_options.add_argument("--disable-gpu")
-    chrome_options.add_argument(f"user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-
-    # **ChromeDriver 자동 다운로드 및 실행**
-    chrome_service = Service(ChromeDriverManager().install())
-    driver = webdriver.Chrome(service=chrome_service, options=chrome_options)
-    
-    return driver
-
-# **기기 감지 함수**
+# **기기 감지 함수 (Selenium 사용)**
 def detect_device():
-    user_agent = st.request.headers.get("User-Agent", "").lower()
-    if "android" in user_agent or "iphone" in user_agent:
-        return "모바일"
-    elif "ipad" in user_agent or "tablet" in user_agent:
-        return "태블릿"
-    else:
+    try:
+        options = Options()
+        options.add_argument("--headless=new")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        
+        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+        driver.get("https://www.whatismybrowser.com/detect/what-is-my-user-agent")
+        user_agent = driver.find_element(By.TAG_NAME, "body").text.lower()
+        driver.quit()
+
+        if "android" in user_agent or "iphone" in user_agent:
+            return "모바일"
+        elif "ipad" in user_agent or "tablet" in user_agent:
+            return "태블릿"
+        else:
+            return "PC"
+    except:
         return "PC"
 
-# 세션 상태 초기화
+# **세션 상태 초기화**
 if "device_type" not in st.session_state:
     st.session_state.device_type = detect_device()
 if "download_ready" not in st.session_state:
@@ -56,6 +52,15 @@ user_pw = st.text_input("🔑 노벨피아 비밀번호 입력", type="password"
 
 st.subheader("📖 소설 크롤링")
 novel_url = st.text_input("🔗 노벨피아 소설 URL 입력", key="novel_url")
+
+# **Selenium 드라이버 설정**
+def init_driver():
+    chrome_options = Options()
+    chrome_options.add_argument("--headless=new")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_service = Service(ChromeDriverManager().install())
+    return webdriver.Chrome(service=chrome_service, options=chrome_options)
 
 # **자동 로그인 기능**
 def login_novelpia(driver, user_id, user_pw):
