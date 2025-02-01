@@ -4,7 +4,6 @@ import asyncio
 import aiofiles
 import pickle
 import time
-import platform
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
@@ -19,6 +18,7 @@ def init_driver():
     chrome_options.add_argument("--disable-blink-features=AutomationControlled")
     chrome_options.add_argument("--no-sandbox")
     chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument(f"user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
 
     # **ChromeDriver 자동 다운로드 및 실행**
@@ -27,10 +27,9 @@ def init_driver():
     
     return driver
 
-# **기기 감지 함수 수정**
+# **기기 감지 함수**
 def detect_device():
     user_agent = st.request.headers.get("User-Agent", "").lower()
-
     if "android" in user_agent or "iphone" in user_agent:
         return "모바일"
     elif "ipad" in user_agent or "tablet" in user_agent:
