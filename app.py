@@ -10,11 +10,15 @@ from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 
-# **Chrome 실행 경로 설정 (Streamlit Cloud 호환)**
-CHROME_PATH = "/usr/bin/chromium-browser"
+# **Chrome 및 ChromeDriver 경로 설정 (Streamlit Cloud용)**
+CHROME_PATH = "/usr/bin/chromium"
 CHROMEDRIVER_PATH = "/usr/bin/chromedriver"
 
-# **Chrome 드라이버 설정 (Streamlit Cloud 지원)**
+# **Chrome이 설치되지 않았다면 설치 (Streamlit Cloud 실행 환경)**
+if not os.path.exists(CHROME_PATH) or not os.path.exists(CHROMEDRIVER_PATH):
+    os.system("apt update && apt install -y chromium chromium-driver")
+
+# **Selenium 드라이버 설정**
 def init_driver():
     chrome_options = Options()
     chrome_options.binary_location = CHROME_PATH  # Chrome 실행 파일 경로 설정
@@ -23,39 +27,13 @@ def init_driver():
     chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--disable-gpu")
     chrome_options.add_argument("--remote-debugging-port=9222")
-    
-    # ChromeDriver 경로 지정
+
+    # ChromeDriver 경로 설정
     chrome_service = Service(CHROMEDRIVER_PATH)
     return webdriver.Chrome(service=chrome_service, options=chrome_options)
 
-# **기기 감지 함수 (User-Agent 가져오기)**
-def detect_device():
-    try:
-        driver = init_driver()
-        driver.get("https://www.whatismybrowser.com/detect/what-is-my-user-agent")
-        user_agent = driver.find_element(By.TAG_NAME, "body").text.lower()
-        driver.quit()
-
-        if "android" in user_agent or "iphone" in user_agent:
-            return "모바일"
-        elif "ipad" in user_agent or "tablet" in user_agent:
-            return "태블릿"
-        else:
-            return "PC"
-    except:
-        return "PC"
-
-# **세션 상태 초기화**
-if "device_type" not in st.session_state:
-    st.session_state.device_type = detect_device()
-if "download_ready" not in st.session_state:
-    st.session_state.download_ready = False
-if "login_success" not in st.session_state:
-    st.session_state.login_success = False
-
 # **Streamlit UI**
 st.title("📖 노벨피아 소설 크롤러")
-st.write(f"현재 기기: **{st.session_state.device_type}**")
 
 # **사용자 입력 필드**
 st.subheader("🔑 로그인 정보 입력")
@@ -79,8 +57,7 @@ def login_novelpia(driver, user_id, user_pw):
         time.sleep(3)
 
         if "logout" in driver.page_source:
-            st.session_state.login_success = True
-            return
+            return True
 
     driver.find_element(By.NAME, "email").send_keys(user_id)
     driver.find_element(By.NAME, "password").send_keys(user_pw)
@@ -88,12 +65,11 @@ def login_novelpia(driver, user_id, user_pw):
     time.sleep(5)
 
     if "logout" in driver.page_source:
-        st.session_state.login_success = True
         with open("novelpia_cookies.pkl", "wb") as f:
             pickle.dump(driver.get_cookies(), f)
+        return True
     else:
-        st.error("🚨 로그인 실패! ID/PW를 확인하세요.")
-        st.session_state.login_success = False
+        return False
 
 # **소설의 모든 화 URL 가져오기**
 def get_chapter_urls(driver, novel_url):
@@ -126,9 +102,7 @@ if st.button("🚀 크롤링 시작"):
         driver = init_driver()
 
         st.info("🔑 로그인 중...")
-        login_novelpia(driver, user_id, user_pw)
-
-        if not st.session_state.login_success:
+        if not login_novelpia(driver, user_id, user_pw):
             st.error("🚨 로그인 실패! 프로그램을 종료합니다.")
             driver.quit()
             st.stop()
@@ -162,3 +136,9 @@ if st.button("🚀 크롤링 시작"):
             st.session_state.download_ready = True
 
         driver.quit()
+    else:
+        st.warning("⚠️ 로그인 정보와 소설 URL을 모두 입력해주세요.")
+
+# **다운로드 버튼 유지**
+if "download_ready" in st.session_state and st.session_state.download_ready:
+    st.download_button("⬇️ 텍스트 파일 다운로드", open("novel.txt", "rb"), file_name="novel.txt")
