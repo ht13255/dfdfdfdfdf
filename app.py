@@ -7,19 +7,31 @@ import time
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.chrome.options import Options
 
-# **기기 감지 함수 (Selenium 사용)**
+# **Chrome 실행 경로 설정 (Streamlit Cloud 호환)**
+CHROME_PATH = "/usr/bin/chromium-browser"
+CHROMEDRIVER_PATH = "/usr/bin/chromedriver"
+
+# **Chrome 드라이버 설정 (Streamlit Cloud 지원)**
+def init_driver():
+    chrome_options = Options()
+    chrome_options.binary_location = CHROME_PATH  # Chrome 실행 파일 경로 설정
+    chrome_options.add_argument("--headless=new")  # 백그라운드 실행
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
+    chrome_options.add_argument("--disable-gpu")
+    chrome_options.add_argument("--remote-debugging-port=9222")
+    
+    # ChromeDriver 경로 지정
+    chrome_service = Service(CHROMEDRIVER_PATH)
+    return webdriver.Chrome(service=chrome_service, options=chrome_options)
+
+# **기기 감지 함수 (User-Agent 가져오기)**
 def detect_device():
     try:
-        options = Options()
-        options.add_argument("--headless=new")
-        options.add_argument("--no-sandbox")
-        options.add_argument("--disable-dev-shm-usage")
-        
-        driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+        driver = init_driver()
         driver.get("https://www.whatismybrowser.com/detect/what-is-my-user-agent")
         user_agent = driver.find_element(By.TAG_NAME, "body").text.lower()
         driver.quit()
@@ -52,15 +64,6 @@ user_pw = st.text_input("🔑 노벨피아 비밀번호 입력", type="password"
 
 st.subheader("📖 소설 크롤링")
 novel_url = st.text_input("🔗 노벨피아 소설 URL 입력", key="novel_url")
-
-# **Selenium 드라이버 설정**
-def init_driver():
-    chrome_options = Options()
-    chrome_options.add_argument("--headless=new")
-    chrome_options.add_argument("--no-sandbox")
-    chrome_options.add_argument("--disable-dev-shm-usage")
-    chrome_service = Service(ChromeDriverManager().install())
-    return webdriver.Chrome(service=chrome_service, options=chrome_options)
 
 # **자동 로그인 기능**
 def login_novelpia(driver, user_id, user_pw):
@@ -159,16 +162,3 @@ if st.button("🚀 크롤링 시작"):
             st.session_state.download_ready = True
 
         driver.quit()
-    else:
-        st.warning("⚠️ 로그인 정보와 소설 URL을 모두 입력해주세요.")
-
-# **다운로드 버튼 유지**
-if st.session_state.download_ready:
-    st.download_button("⬇️ 텍스트 파일 다운로드", open("novel.txt", "rb"), file_name="novel.txt")
-
-# **초기화 버튼**
-if st.button("🔄 초기화"):
-    for key in list(st.session_state.keys()):
-        if key not in ["device_type"]:
-            del st.session_state[key]
-    st.experimental_rerun()
