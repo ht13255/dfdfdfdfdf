@@ -1,5 +1,5 @@
 streamlit
 selenium
-undetected-chromedriver
+webdriver-manager
 aiofiles
 asyncio
