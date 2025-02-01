@@ -9,9 +9,11 @@ import os
 import asyncio
 import aiofiles
 
-# **기기 감지 정확도 향상 (User-Agent 기반)**
+# **기기 감지 함수 수정 (`st.request_headers` 사용)**
 def detect_device():
-    user_agent = st.headers.get("User-Agent", "").lower()
+    headers = st.session_state.get("request_headers", {})
+    user_agent = headers.get("User-Agent", "").lower()
+
     if "android" in user_agent or "iphone" in user_agent:
         return "모바일"
     elif "ipad" in user_agent or "tablet" in user_agent:
