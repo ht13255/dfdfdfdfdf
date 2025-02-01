@@ -1,5 +1,5 @@
 streamlit
-beautifulsoup4
 selenium
-webdriver-manager
-requests
+undetected-chromedriver
+aiofiles
+asyncio
